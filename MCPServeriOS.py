@@ -1,7 +1,5 @@
 import os
 import json
-import time
-import asyncio
 from fastmcp import FastMCP
 from dotenv import load_dotenv
 from scrapli import AsyncScrapli
@@ -9,17 +7,17 @@ from pydantic import BaseModel, Field
 
 # Load environment variables
 load_dotenv()
-USERNAME = os.getenv("ROUTER_USERNAME")
-SSH_KEY_PATH = os.getenv("SSH_KEY_PATH")
+USERNAME = os.getenv("ROUTER_USERNAME_IOS")
+PASSWORD = os.getenv("ROUTER_PASSWORD_IOS")
 
-if not USERNAME or not SSH_KEY_PATH:
-    raise RuntimeError("Credentials not set")
+if not USERNAME or not PASSWORD:
+    raise RuntimeError("ROUTER_USERNAME_IOS / ROUTER_PASSWORD_IOS not set")
 
 # Instandtiate the FastMCP class
-mcp = FastMCP("mcp_automation")
+mcp = FastMCP("mcp_automation_ios")
 
 # Loading devices from inventory
-INVENTORY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "inventory", "NETWORK.json")
+INVENTORY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "inventory", "IOS_NETWORK.json")
 if not os.path.exists(INVENTORY_FILE):
     raise RuntimeError(f"Inventory file not found: {INVENTORY_FILE}")
 
@@ -30,16 +28,16 @@ with open(INVENTORY_FILE) as f:
 # SHow command - input model
 class ShowCommand(BaseModel):
     """Run a show command against a network device."""
-    device: str = Field(..., description="Device name from inventory (e.g. R1,R2, R3)")
+    device: str = Field(..., description="Device name from inventory (e.g. C1, C2, C3)")
     command: str = Field(..., description="Show command to execute on the device")
 
 class ConfigCommand(BaseModel):
     """Send configuration commands to one or more devices."""
-    devices: list[str] = Field(..., description="Device names from inventory (e.g. ['R1', 'R2'])")
+    devices: list[str] = Field(..., description="Device names from inventory (e.g. ['C1', 'C2'])")
     commands: list[str] = Field(..., description="Configuration commands to apply")
 
 # Read config tool
-@mcp.tool(name="run_show")
+@mcp.tool(name="run_show_ios")
 async def run_show(params: ShowCommand) -> str:
     """
     Execute a show command asynchronously using Scrapli via SSH.
@@ -53,7 +51,7 @@ async def run_show(params: ShowCommand) -> str:
         "platform": device["platform"],
         "transport": device["transport"],
         "auth_username": USERNAME,
-        "auth_private_key": SSH_KEY_PATH,
+        "auth_password": PASSWORD,
         "auth_strict_key": False,
     }
 
@@ -68,57 +66,43 @@ def validate_commands(cmds: list[str]):
     for c in cmds:
         if any(bad in c.lower() for bad in FORBIDDEN):
             raise ValueError(f"Forbidden command detected: {c}")
-
-# Function for pushing configs to a device       
-async def push_config_to_device(dev_name, device, commands):
-    connection = {
-        "host": device["host"],
-        "platform": device["platform"],
-        "transport": device["transport"],
-        "auth_username": USERNAME,
-        "auth_private_key": SSH_KEY_PATH,
-        "auth_strict_key": False,
-    }
-
-    async with AsyncScrapli(**connection) as conn:
-        response = await conn.send_configs(commands)
-        return dev_name, response.result
-
+        
 # Send config tool
-@mcp.tool(name="push_config")
+@mcp.tool(name="push_config_ios")
 async def push_config(params: ConfigCommand) -> dict:
     """
     Push configuration commands to one or more devices.
     """
-
-    start = time.perf_counter()
-
     # Check for any forbidden commands
     validate_commands(params.commands)
 
-    tasks = []
-
-    for dev_name in params.devices:
-        device = devices.get(dev_name)
-        tasks.append(
-            asyncio.create_task(
-                push_config_to_device(dev_name, device, params.commands)
-            )
-        )
-
     results = {}
 
-    completed = await asyncio.gather(*tasks, return_exceptions=True)
+    for dev_name in params.devices:
+        try:
+            device = devices.get(dev_name)
+            if not device:
+                results[dev_name] = "Unknown device"
+                continue
 
-    for item in completed:
-        if isinstance(item, Exception):
-            continue
-        dev_name, result = item
-        results[dev_name] = result
+            connection = {
+                "host": device["host"],
+                "platform": device["platform"],
+                "transport": device["transport"],
+                "auth_username": USERNAME,
+                "auth_password": PASSWORD,
+                "auth_strict_key": False,
+            }
 
-    end = time.perf_counter()
+            async with AsyncScrapli(**connection) as conn:
+                response = await conn.send_configs(params.commands)
+                results[dev_name] = response.result
 
-    results["execution_time_seconds"] = round(end - start, 2)
+        except Exception as e:
+            results[dev_name] = {
+                "status": "failed",
+                "error": str(e),
+            }
 
     return results
             
