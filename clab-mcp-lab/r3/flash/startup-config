@@ -1,4 +1,4 @@
-! Startup-config last modified at Tue Mar 31 16:45:07 2026 by root
+! Startup-config last modified at Tue Mar 31 19:49:44 2026 by root
 ! device: r3 (cEOSLab, EOS-4.35.0F-44178984.4350F (engineering build))
 !
 no aaa root
@@ -41,7 +41,7 @@ interface Ethernet2
    ip address 192.168.13.3/24
 !
 interface Loopback0
-   ip address 3.3.3.3/32
+   ip address 33.33.33.33/32
 !
 interface Management0
    ip address 172.20.20.33/24
@@ -65,7 +65,7 @@ router multicast
       software-forwarding kernel
 !
 router ospf 1
-   router-id 3.3.3.13
+   router-id 3.3.3.3
    network 192.168.13.0/24 area 0.0.0.0
    network 192.168.23.0/24 area 0.0.0.0
    max-lsa 12000

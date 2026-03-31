@@ -1,0 +1,73 @@
+! Command: show running-config
+! device: r3 (cEOSLab, EOS-4.35.0F-44178984.4350F (engineering build))
+!
+no aaa root
+!
+username admin privilege 15 role network-admin secret sha512 $6$.xi5bj8psjm2cs09$dBIZWUypf8HLv0F886TSspLWM1FYtYjbteJOl.LCLWmg5kk2m3v.cZbVVh27ayMylXLqXCS5mM7rrlY4ESs/..
+username claude_mcp privilege 15 secret sha512 $6$hsqi6IfiA6D/0fmC$R/vilezaGdMkF26t9FcZLVq1psUfRUkKDF1C4en8nZB3Ie5A7CB6DeB2yfCm9h69JEWWb1224m.23h6QEEbBH1
+username claude_mcp ssh-key ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDnzWQ+ohk4BQpB8+PqTdItwfsZGWnsheNoRnXjJSTfymVuybo/H87lkOBojY2kfQGZ8TefBzxHSZj3BI9MX/Gc01ab6h7alyyH+C+9sWwkfz06/SDcTGgezx6qFvUWETyOBG9wVWH7IlZ43KlBhQZoblqX2CXZRxyt7GdPadPIieMFFLuh4XMvKpNez/5dRZMlhECDpcmaLy/ew3iauJTDrbJpaGijKWZDNivQZrr4HUmjYd4SjU8mf/6ACncYQc/Z1DEGQt0OkMThsbtmnLYnIvmVkq4lD2hOTY+LoVoNttEVPP4F488OWb49qvR+R6gkQKNVOSQ7GwiYQH9oDT+j azureuser@MCP-VM1
+!
+management api http-commands
+   no shutdown
+!
+no service interface inactive port-id allocation disabled
+!
+transceiver qsfp default-mode 4x10G
+!
+service routing protocols model multi-agent
+!
+hostname r3
+!
+spanning-tree mode mstp
+!
+system l1
+   unsupported speed action error
+   unsupported error-correction action error
+!
+management api gnmi
+   transport grpc default
+!
+management api netconf
+   transport ssh default
+!
+interface Ethernet1
+   description To-R2
+   no switchport
+   ip address 192.168.23.3/24
+!
+interface Ethernet2
+   description To-R1
+   no switchport
+   ip address 192.168.13.3/24
+!
+interface Loopback0
+   ip address 33.33.33.33/32
+!
+interface Management0
+   ip address 172.20.20.33/24
+   ipv6 address 3fff:172:20:20::3/64
+!
+ip routing
+!
+ip route 0.0.0.0/0 172.20.20.1
+!
+ipv6 route ::/0 3fff:172:20:20::1
+!
+ntp server 1.1.1.1
+ntp server 2.2.2.2
+ntp server 33.33.33.33
+!
+router multicast
+   ipv4
+      software-forwarding kernel
+   !
+   ipv6
+      software-forwarding kernel
+!
+router ospf 1
+   router-id 3.3.3.3
+   network 192.168.13.0/24 area 0.0.0.0
+   network 192.168.23.0/24 area 0.0.0.0
+   max-lsa 12000
+!
+end

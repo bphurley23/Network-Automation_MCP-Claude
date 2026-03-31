@@ -1,11 +1,13 @@
 import os
 import json
 import time
+import pytz
 import asyncio
 from fastmcp import FastMCP
 from dotenv import load_dotenv
 from scrapli import AsyncScrapli
 from pydantic import BaseModel, Field
+from datetime import datetime, time as dt_time
 
 # Load environment variables
 load_dotenv()
@@ -27,12 +29,13 @@ if not os.path.exists(INVENTORY_FILE):
 with open(INVENTORY_FILE) as f:
     devices = json.load(f)
 
-# SHow command - input model
+# Show command - input model
 class ShowCommand(BaseModel):
     """Run a show command against a network device."""
-    device: str = Field(..., description="Device name from inventory (e.g. R1,R2, R3)")
+    device: str = Field(..., description="Device name from inventory (e.g. R1, R2, R3)")
     command: str = Field(..., description="Show command to execute on the device")
 
+# Config commands - input model
 class ConfigCommand(BaseModel):
     """Send configuration commands to one or more devices."""
     devices: list[str] = Field(..., description="Device names from inventory (e.g. ['R1', 'R2'])")
@@ -41,6 +44,12 @@ class ConfigCommand(BaseModel):
 # Empty input model
 class EmptyInput(BaseModel):
     pass
+
+
+# Snapshot - input model
+class SnapshotInput(BaseModel):
+    devices: list[str] = Field(..., description="Devices to snapshot (e.g. R1, R2, R3)")
+    profile: str = Field(..., description="Snapshot profile (e.g. ospf, stp)")
 
 # Read config tool
 @mcp.tool(name="run_show")
@@ -140,6 +149,100 @@ async def get_intent(params: EmptyInput) -> dict:
 
     with open(intent_file) as f:
         return json.load(f)
+
+# Snapshot tool: collect current state, store it on disk, return snapshot metadata
+@mcp.tool(name="snapshot_state")
+async def snapshot_state(params: SnapshotInput) -> dict:
+    """
+    Takes a snapshot of device state for the given profile.
+    Intended to be used before changes so differences can be reviewed manually.
+    """
+
+    snapshot_id = time.strftime("%Y%m%d-%H%M%S")
+    base_path = os.path.join("snapshots", snapshot_id) 
+    os.makedirs(base_path, exist_ok=True)
+
+    stored = {}
+
+    for dev_name in params.devices:
+        device = devices.get(dev_name)
+        if not device:
+            continue
+
+    dev_path = os.path.join(base_path, dev_name)
+    os.makedirs(dev_path, exist_ok=True)
+
+    connection = {
+        "host": device["host"],
+        "platform": device["platform"],
+        "transport": device["transport"],
+        "auth_username": USERNAME,
+        "auth_private_key": SSH_KEY_PATH,
+        "auth_strict_key": False,
+    }
+
+    async with AsyncScrapli(**connection) as conn:
+        outputs = {}
+
+        # Always save running config
+        outputs["running_config"] = (
+            await conn.send_command("show running-config")
+        ).result
+
+        # Profile-driven commands
+        if params.profile == "ospf":
+            outputs["ospf_config"] = (await conn.send_command("show ip ospf")).result
+            outputs["neighbors"] = (await conn.send_command("show ip ospf neighbor")).result
+
+        elif params.profile == "stp":
+            outputs["stp_general"] = (await conn.send_command("show spanning-tree")).result
+            outputs["stp_details"] = (await conn.send_command("show spanning-tree detail")).result
+
+    for name, content in outputs.items():
+        with open(os.path.join(dev_path, f"{name}.txt"), "w") as f:
+            f.write(content)
+
+    stored[dev_name] = list(outputs.keys())
+
+    return {
+        "snapshot_id": snapshot_id,
+        "stored_at": base_path,
+        "devices": stored,
+    }
+
+# Policy for maintenance windows
+@mcp.tool(name="check_maintenance_window")
+async def check_maintenance_window(params: EmptyInput) -> dict:
+    """
+    Checks whether the current time falls within an approved maintenance window.
+    
+    This tool is intended to be called before making configuration changes.
+    It does not block or apply changes by itself - it only reports whether
+    changes are currently allowed based on time-based policy.
+    
+    The result of this tool is consumed by other tools (e.g. push_config)
+    to enforece time-based change policies.
+    
+    Note: Maintenance policy is read-only and managed outside automation.
+    """
+
+    policy_file = os.path.exists(
+        os.path.dirname(os.path.abspath(__file__)),
+        "policy",
+        "MAINTENANCE.json"
+    )
+
+    if not os.pathists(policy_file):
+        return {
+            "allowed": True,
+            "reason": "No maintenance policy defined"
+        }
+    
+    with open(policy_file) as f:
+        policy = json.load(f)
+
+    tz = pytz.timezone(policy.get("timezone", "UTC"))
+    now = datetime.naow(tz)
 
 # Run the MCP Server
 if __name__ == "__main__":
