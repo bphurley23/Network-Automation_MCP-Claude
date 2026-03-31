@@ -6,7 +6,8 @@
       "Bash(find /home/azureuser/mcp-project -type f -name *config* -o -name *router* -o -name *switch*)",
       "Bash(find /home/azureuser/mcp-project -type f \\\\\\(-name *.cfg -o -name *.conf -o -name *startup* -o -name *running* \\\\\\))",
       "Bash(find /home/azureuser/mcp-project -type f \\\\\\(-name *.yaml -o -name *.yml -o -name *.json -o -name *.txt \\\\\\))",
-      "Bash(find /home/azureuser/mcp-project/clab-mcp-lab -type f -name *.json -o -name *.yaml -o -name *.yml)"
+      "Bash(find /home/azureuser/mcp-project/clab-mcp-lab -type f -name *.json -o -name *.yaml -o -name *.yml)",
+      "mcp__mcp_automation__get_intent"
     ]
   }
 }

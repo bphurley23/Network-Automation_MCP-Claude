@@ -1,3 +1,4 @@
 .env
 NETWORK.json
 IOS_NETWORK.json
+INTENT.json
