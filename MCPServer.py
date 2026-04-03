@@ -45,11 +45,15 @@ class ConfigCommand(BaseModel):
 class EmptyInput(BaseModel):
     pass
 
-
 # Snapshot - input model
 class SnapshotInput(BaseModel):
     devices: list[str] = Field(..., description="Devices to snapshot (e.g. R1, R2, R3)")
     profile: str = Field(..., description="Snapshot profile (e.g. ospf, stp)")
+
+# Risk score - input model
+class RiskInput(BaseModel):
+    devices: list[str] = Field(..., description="Devices affected by the config change")
+    commands: list[str] = Field(..., description="Configuration commands to apply")
 
 # Read config tool
 @mcp.tool(name="run_show")
@@ -102,7 +106,21 @@ async def push_config_to_device(dev_name, device, commands):
 async def push_config(params: ConfigCommand) -> dict:
     """
     Push configuration commands to one or more devices.
+
+    IMPORTANT:
+    - This tool enforces maintenance window policy.
+    - If changes are outside the approved window, the tool will refuse to run.
+    - Maintenance policy files (e.g. MAINTENANCE.json) MUST NOT be modified
+    by Claude or by any automation workflow.
+    - If a change is blocked, Claude should inform the user and stop.
+    - Risk assessment is advisory only and does not block changes.
     """
+
+    # Check maintenance window
+    await check_maintenance_window(EmptyInput())
+
+    # Check risk score
+    risk = await assess_risk(RiskInput(devices=params.devices, commands=params.commands))
 
     start = time.perf_counter()
 
@@ -132,7 +150,7 @@ async def push_config(params: ConfigCommand) -> dict:
     end = time.perf_counter()
 
     results["execution_time_seconds"] = round(end - start, 2)
-
+    results["risk_assessment"] = risk
     return results
 
 # Returns the expected network intent defined in the INTENT.json file (source of truth)
@@ -226,13 +244,13 @@ async def check_maintenance_window(params: EmptyInput) -> dict:
     Note: Maintenance policy is read-only and managed outside automation.
     """
 
-    policy_file = os.path.exists(
+    policy_file = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
         "policy",
         "MAINTENANCE.json"
     )
 
-    if not os.pathists(policy_file):
+    if not os.path.exists(policy_file):
         return {
             "allowed": True,
             "reason": "No maintenance policy defined"
@@ -242,7 +260,70 @@ async def check_maintenance_window(params: EmptyInput) -> dict:
         policy = json.load(f)
 
     tz = pytz.timezone(policy.get("timezone", "UTC"))
-    now = datetime.naow(tz)
+    now = datetime.now(tz)
+
+    current_day = now.strftime("%a").lower()[:3]
+    current_time = now.time()
+
+    for window in policy.get("windows", []):
+        if current_day in window["days"]:
+            start = dt_time.fromisoformat(window["start"])
+            end = dt_time.fromisoformat(window["end"])
+
+            if start <= current_time <= end:
+                return {
+                    "allowed": True,
+                    "current_time": now.isoformat(),
+                    "reason": "Within maintenance window"
+                }
+            
+    return {
+        "allowed": False,
+        "current_time": now.isoformat(),
+        "reason": "Outside maintenance window"
+    }
+
+# Risk assessment tool
+@mcp.tool(name="assess_risk")
+async def assess_risk(params: RiskInput) -> dict:
+    """
+    Assings a simple risk level (low / medium / high) to a configuration change.
+    This tool does NOT block changes. It only reports risk.
+    """
+
+    cmd_text = " ".join(params.commands).lower()
+    device_count = len(params.devices)
+
+    reasons = []
+
+    # Blast radius
+    if device_count >= 3:
+        risk = "high"
+        reasons.append(f"Change affects {device_count} devices")
+
+    elif device_count > 1:
+        risk = "medium"
+        reasons.append(f"Change affects multiple devices ({device_count})")
+
+    elif device_count == 1:
+        risk = "low"
+        reasons.append(f"Change affects a single device")
+
+    # Content-based assessment
+    if any(k in cmd_text for k in ["router ", "ospf", "bgp", "isis", "eigrp"]):
+        risk = "high"
+        reasons.append("Touches routing control plane")
+
+    if any(k in cmd_text for k in ["shutdown", "no shutdown"]):
+        risk = "high"
+        reasons.append("Interface disruption possible")
+
+    return {
+        "risk": risk,
+        "devices": device_count,
+        "reasons": reasons or ["Minor configuration change"]
+    }
+
 
 # Run the MCP Server
 if __name__ == "__main__":

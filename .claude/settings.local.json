@@ -10,7 +10,9 @@
       "mcp__mcp_automation__get_intent",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\(''''mcpServers'''',{}\\), indent=2\\)\\)\")",
       "Read(//home/azureuser/.claude/**)",
-      "mcp__mcp_automation__snapshot_state"
+      "mcp__mcp_automation__snapshot_state",
+      "mcp__mcp_automation__check_maintenance_window",
+      "mcp__mcp_automation__assess_risk"
     ]
   }
 }

@@ -6,7 +6,7 @@
       "prefix": "clab",
       "mgmt": {
         "network": "clab",
-        "bridge": "br-0820621af47f",
+        "bridge": "br-5b5e22506c5f",
         "ipv4-subnet": "172.20.20.0/24",
         "ipv4-gw": "172.20.20.1",
         "ipv6-subnet": "3fff:172:20:20::/64",
@@ -30,13 +30,13 @@
       "mgmt-intf": "Management0",
       "mgmt-ipv4-address": "172.20.20.11",
       "mgmt-ipv4-prefix-length": 24,
-      "mgmt-ipv6-address": "3fff:172:20:20::2",
+      "mgmt-ipv6-address": "3fff:172:20:20::3",
       "mgmt-ipv6-prefix-length": 64,
-      "mac-address": "00:1c:73:b5:f0:4d",
+      "mac-address": "00:1c:73:c5:42:cf",
       "labels": {
         "clab-git-branch": "main",
-        "clab-git-hash": "0946961",
-        "clab-mgmt-net-bridge": "br-0820621af47f",
+        "clab-git-hash": "4c91c25",
+        "clab-mgmt-net-bridge": "br-5b5e22506c5f",
         "clab-node-group": "",
         "clab-node-kind": "arista_ceos",
         "clab-node-lab-dir": "/home/azureuser/mcp-project/clab-mcp-lab/r1",
@@ -65,11 +65,11 @@
       "mgmt-ipv4-prefix-length": 24,
       "mgmt-ipv6-address": "3fff:172:20:20::4",
       "mgmt-ipv6-prefix-length": 64,
-      "mac-address": "00:1c:73:15:b1:4e",
+      "mac-address": "00:1c:73:71:9d:ae",
       "labels": {
         "clab-git-branch": "main",
-        "clab-git-hash": "0946961",
-        "clab-mgmt-net-bridge": "br-0820621af47f",
+        "clab-git-hash": "4c91c25",
+        "clab-mgmt-net-bridge": "br-5b5e22506c5f",
         "clab-node-group": "",
         "clab-node-kind": "arista_ceos",
         "clab-node-lab-dir": "/home/azureuser/mcp-project/clab-mcp-lab/r2",
@@ -96,13 +96,13 @@
       "mgmt-intf": "Management0",
       "mgmt-ipv4-address": "172.20.20.33",
       "mgmt-ipv4-prefix-length": 24,
-      "mgmt-ipv6-address": "3fff:172:20:20::3",
+      "mgmt-ipv6-address": "3fff:172:20:20::2",
       "mgmt-ipv6-prefix-length": 64,
-      "mac-address": "00:1c:73:c2:cf:46",
+      "mac-address": "00:1c:73:ff:7a:16",
       "labels": {
         "clab-git-branch": "main",
-        "clab-git-hash": "0946961",
-        "clab-mgmt-net-bridge": "br-0820621af47f",
+        "clab-git-hash": "4c91c25",
+        "clab-mgmt-net-bridge": "br-5b5e22506c5f",
         "clab-node-group": "",
         "clab-node-kind": "arista_ceos",
         "clab-node-lab-dir": "/home/azureuser/mcp-project/clab-mcp-lab/r3",
@@ -123,13 +123,13 @@
         "a": {
           "node": "r1",
           "interface": "eth1",
-          "mac": "aa:c1:ab:99:01:f0",
+          "mac": "aa:c1:ab:41:5e:56",
           "peer": "z"
         },
         "z": {
           "node": "r2",
           "interface": "eth1",
-          "mac": "aa:c1:ab:98:31:c9",
+          "mac": "aa:c1:ab:80:37:7c",
           "peer": "a"
         }
       }
@@ -139,13 +139,13 @@
         "a": {
           "node": "r2",
           "interface": "eth2",
-          "mac": "aa:c1:ab:12:31:c2",
+          "mac": "aa:c1:ab:65:62:1e",
           "peer": "z"
         },
         "z": {
           "node": "r3",
           "interface": "eth1",
-          "mac": "aa:c1:ab:17:5f:0b",
+          "mac": "aa:c1:ab:4d:63:f1",
           "peer": "a"
         }
       }
@@ -155,13 +155,13 @@
         "a": {
           "node": "r1",
           "interface": "eth2",
-          "mac": "aa:c1:ab:0e:2a:ee",
+          "mac": "aa:c1:ab:71:cb:a4",
           "peer": "z"
         },
         "z": {
           "node": "r3",
           "interface": "eth2",
-          "mac": "aa:c1:ab:fb:5e:39",
+          "mac": "aa:c1:ab:25:bc:2a",
           "peer": "a"
         }
       }
